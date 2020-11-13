@@ -1,0 +1,31 @@
+{
+  "name": "backend_covidclicker",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.js",
+  "scripts": {
+    "start": "nodemon main.js",
+    "del_bd": "node bd/delete_data_bd.js",
+    "cr_bd": "node bd/create_bd.js",
+    "dr_bd": "node bd/drop_bd.js",
+    "res_bd": "npm run del_bd; npm run dr_bd; npm run cr_bd",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/richardoot/backend_CovidClicker.git"
+  },
+  "author": "Richard BOILLEY",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/richardoot/backend_CovidClicker/issues"
+  },
+  "homepage": "https://github.com/richardoot/backend_CovidClicker#readme",
+  "dependencies": {
+    "body-parser": "^1.19.0",
+    "cors": "^2.8.5",
+    "express": "^4.17.1",
+    "nodemon": "^2.0.6",
+    "sqlite3": "^5.0.0"
+  }
+}
