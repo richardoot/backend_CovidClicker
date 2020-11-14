@@ -249,6 +249,10 @@ function ajouter_un_user(userData) {
                     db.run('INSERT INTO user(email, password, nom, prenom, date_update, nb_malades, production_per_sec, production_click) VALUES(?,?,?,?,?,?,?,?)',[userData.email, userData.password, userData.nom, userData.prenom, Math.floor(Date.now()/1000), 0, 0, 1000]); 
                     db.get('SELECT * FROM user WHERE email=?',[userData.email],function(err,data){
                         db.run('INSERT INTO item(price, number, production, name, image, id_user) VALUES(?,?,?,?,?,?),(?,?,?,?,?,?),(?,?,?,?,?,?),(?,?,?,?,?,?)',[ 10,0,0.5,"Pangolin","pangolin-item.png",data.id ,100,0,3,"Test défaillant","test-tube.png",data.id,1000,0,6,"Cluster","cluster.png",data.id,5000,0,12,"Fêtes de Bayonne","party.png",data.id]);
+                        db.all('SELECT item.id FROM item JOIN user ON user.id = item.id_user WHERE user.email=? ORDER BY item.id ASC',[userData.email], function(err,tab_id_items){
+                            console.log(tab_id_items);
+                            db.run('INSERT INTO power(actif, name, price, coeff, item_id, image, id_user) VALUES(?,?,?,?,?,?,?),(?,?,?,?,?,?,?),(?,?,?,?,?,?,?),(?,?,?,?,?,?,?),(?,?,?,?,?,?,?)',[false,"Double Clicker",100,2,null,"img.jpg",data.id,false,"Double Production Pangolin",1000,2,tab_id_items[0].id,"img.jpg",data.id,false,"Double Production des faux tests",5000,2,tab_id_items[1].id,"img.jpg",data.id,false,"Double Production Cluster",10000,2,tab_id_items[2].id,"img.jpg",data.id,false,"Double Alcool Fêtes de Bayonne",50000,2,tab_id_items[3].id,"img.jpg",data.id]);
+                    });
                         // db.run('INSERT INTO power(actif, name, price, coeff, item_id, image, id_user) VALUES(?,?,?,?,?,?,?)',[false,"Double Clicker",100,2,null,"img.jpg",data.id,false,"Double Production Pangolin",1000,2,0,"img.jpg",  data.id]);
                         
                         // db.run('INSERT INTO item(id, price, number, production, name, image, id_user) VALUES(?,?,?,?,?,?,?)',[ 1 ,10,     0,      0.5,    "Pangolin"          ,"pangolin-item.png"   ,data.id]);
@@ -275,14 +279,19 @@ function ajouter_un_user(userData) {
 function verifier_inscription(userData) {
     return new Promise((resolve, reject) => {
       try {
-        db.get('SELECT * FROM user WHERE email=?',[userData.email] , function(err, data) {
-            let SELECT_ITEMS_OF_USER = `SELECT * FROM user JOIN item ON item.id_user = user.id WHERE user.id = ${data.id}`;
-            db.all(SELECT_ITEMS_OF_USER, function(err,items){
-                data.items = items;
+        db.serialize(() => {
+            db.get('SELECT * FROM user WHERE email=?',[userData.email] , function(err, data) {
+                let SELECT_ITEMS_OF_USER = `SELECT item.price, item.number, item.production, item.name, item.image, item.id_user FROM user JOIN item ON item.id_user = user.id WHERE user.id = ${data.id}`;
+                db.all(SELECT_ITEMS_OF_USER, function(err,items){
+                    data.items = items;
+                });
+                let SELECT_POWERS_OF_USER = `SELECT power.actif, power.name, power.price, power.coeff, power.item_id, power.image, power.id_user FROM user JOIN power ON power.id_user = user.id WHERE user.id = ${data.id}`;
+                db.all(SELECT_POWERS_OF_USER, function(err,powers){
+                    data.powers = powers;
+                });
                 resolve(data);
             })
-        })
-        
+        });
       } catch (err) {
         throw err;
       }
