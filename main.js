@@ -1,15 +1,20 @@
+'use strict;'
+
 const express = require('express');
-const sqlite3 = require('sqlite3').verbose();
-// const cors = require('cors');
+const cors = require('cors');
 const bodyParser = require('body-parser');
+
+const sqlite3 = require('sqlite3').verbose();
+
+// Initialisation serveur
 const app = express();
 
-// app.use(cors);
+// Sécurité
+app.use(cors());
+
+// Configuration parser body
 app.use(bodyParser.json());
 
-const INSERT_USER = "INSERT INTO user(email, password, nom, prenom, nb_malades, nb_malades_sec, nb_malades_click) VALUES(?,?,?,?,?,?,?)";
-const INSERT_ITEM = "INSERT INTO item(price, number, production, name, image, id_user) VALUES(?,?,?,?,?,?)";
-const INSERT_POWER = "INSERT INTO power(actif, name, price, coeff, item_id, image, id_user) VALUES(?,?,?,?,?,?,?)";
                     
 const SELECT_ALL_USER = "SELECT * FROM user;";
 const SELECT_ALL_ITEM = "SELECT * FROM item;";
@@ -44,22 +49,12 @@ app.get('/', (req, res) => {
 });
 
 /* Only get item dynamic data by user id for store */
-app.get('/dynamic/itemByUserId/:userId', (req, res) => {
+app.get('/itemByUserId/:userId', (req, res) => {
     let id = req.params.userId;
 
-    getDynamicItemByID(id)
+    getItemByID(id)
     .then(json => {
         res.status(200).json({json});
-    })
-});
-
-/* Only get item static data by user id for Game component */
-app.get('/static/itemByUserId/:userId', (req, res) => {
-    let id = req.params.userId;
-
-    getStaticItemByID(id)
-    .then(userData => {
-        res.status(200).json({userData});
     })
 });
 
@@ -82,6 +77,7 @@ app.get('/user/:id', (req, res) => {
         res.status(200).json({data});
     })
 });
+
 
 /* Get all users */
 app.get('/user', (req, res) => {
@@ -109,56 +105,81 @@ app.get('/power', (req, res) => {
 });
 
 ////////////////// POST
+/* Login */
+app.post('/login', cors(), (req, res) => {
+    let userData = req.body;
+
+    login(userData)
+    .then(user => {
+        res.status(200).json(user);
+    })
+    .catch(code => {
+        res.status(code).json({msg: "interdit"});
+    });
+
+});
+
 /* Inscription d'un nouveau utilisateur */
 app.post('/user', (req, res) => {
     let userData = req.body;
 
-    ajouter_un_user(userData);
-
-    verifier_inscription(userData)
-    .then(user => {
-        res.status(200).json(user);
+    ajouter_un_user(userData)
+    .then((bool) => {
+        if(bool){
+            verifier_inscription(userData)
+            .then(user => {
+                res.status(200).json(user);
+            });
+        }
+    })
+    .catch(code => {
+        res.status(code).json({message: "Email déjà existant"});
     });
+
 
 });
 
 
 ////////////////// PATCH
-/* Mise à jour des données utilisateur Pour la sauvegarde */
+/* Mise à jour complète */
 app.patch('/user/:id', (req, res) => {
     let id = req.params.id;
-    let body = req.body;
+    let user = req.body;
+    let items = user.items;
+    let powers = user.powers;
+    delete user.items;
+    delete user.powers;
 
-    updateUser(id,body);
+    updateUser(id,user);
+    updateItems(items);
+    updatePowers(powers);
+    // res.status(200).json({msg: "OK"});
+
     verifier_user(id)
     .then(user => {
-        res.status(200).json(user);
+        verifierElement('item',id)
+        .then(items => {
+            user.items = items;
+            verifierElement('power',id)
+            .then(powers => {
+                user.powers = powers;
+                res.status(200).json(user);
+            }) 
+        });
     });
 });
 
-/* Mise à jour des items Pour la sauvegarde */
-app.patch('/item/:id', (req, res) => {
-    let id = req.params.id;
-    let body = req.body;
+/* Mise à jour des données utilisateur Pour la sauvegarde */
+// app.patch('/user/:id', (req, res) => {
+//     let id = req.params.id;
+//     let body = req.body;
 
-    updateItem(id,body);
-    verifierElement('item',id)
-    .then(user => {
-        res.status(200).json(user);
-    });
-});
-
-/* Mise à jour des powers Pour la sauvegarde */
-app.patch('/power/:id', (req, res) => {
-    let id = req.params.id;
-    let body = req.body;
-
-    updatePower(id,body);
-    verifierElement('power',id)
-    .then(user => {
-        res.status(200).json(user);
-    });
-});
+//     updateUser(id,body);
+//     verifier_user(id)
+//     .then(user => {
+//         res.status(200).json(user);
+//     });
+// });
 
 
 
@@ -174,6 +195,27 @@ app.listen(port, () => {
 //////////////FONCTIONS
 
 ////////// USER
+function login(userData){
+    return new Promise((resolve, reject) => {
+        db.get("SELECT * FROM user WHERE email=? AND password=?",[userData.email,userData.password], function(err,data){
+            if(err){
+                reject(500);
+            }
+
+            if(data){
+                getItemByID(data.id)
+                .then(items => {
+                    data.items = items;
+                    resolve(data);
+                });
+
+            } else{
+                reject(401);
+            }
+        });
+    });
+}
+
 function updateUser(id,body) {
     let UPDATE_REQUEST = 'UPDATE user SET';
     for (const attribut in body) {
@@ -181,14 +223,14 @@ function updateUser(id,body) {
             case 'nb_malades':
               UPDATE_REQUEST+=` nb_malades='${body.nb_malades}',`;
               break;
-            case 'nb_malades_sec':
-              UPDATE_REQUEST+=` nb_malades_sec = ${body.nb_malades_sec},`;
+            case 'production_per_sec':
+              UPDATE_REQUEST+=` production_per_sec = ${body.production_per_sec},`;
               break;
-            case 'nb_malades_click':
-              UPDATE_REQUEST+=` nb_malades_click = ${body.nb_malades_click},`;
+            case 'production_click':
+              UPDATE_REQUEST+=` production_click = ${body.production_click},`;
               break;
             default:
-              console.log(`Sorry, we are out of ${expr}.`);
+              break;
           }
     }
     UPDATE_REQUEST=UPDATE_REQUEST.slice(0,-1); //supprimer la dernière virgule
@@ -199,7 +241,28 @@ function updateUser(id,body) {
 function ajouter_un_user(userData) {
   try {
     return new Promise((resolve, reject) => {
-        db.run('INSERT INTO user(email, password, nom, prenom, date_update, nb_malades, nb_malades_sec, nb_malades_click) VALUES(?,?,?,?,?,?,?,?)',[userData.email, userData.password, userData.nom, userData.prenom, Math.floor(Date.now()/1000), 0, 0, 0]); 
+        db.get('SELECT * FROM user WHERE email=?',[userData.email],function(err,data){
+            console.log("THE DATA");
+            console.log("THE DATA is : %j",data);
+            if(data){
+                reject(400);
+            } else {
+                db.run('INSERT INTO user(email, password, nom, prenom, date_update, nb_malades, production_per_sec, production_click) VALUES(?,?,?,?,?,?,?,?)',[userData.email, userData.password, userData.nom, userData.prenom, Math.floor(Date.now()/1000), 0, 0, 1000]); 
+                db.get('SELECT * FROM user WHERE email=?',[userData.email],function(err,data){
+                    db.run('INSERT INTO item(price, number, production, name, image, id_user) VALUES(?,?,?,?,?,?)',[10,     0,      0.5,    "Pangolin"          ,"pangolin-item.png"   ,data.id]);
+                    db.run('INSERT INTO item(price, number, production, name, image, id_user) VALUES(?,?,?,?,?,?)',[100,    0,      3,      "Test défaillant"   ,"test-tube.png"       ,data.id]);
+                    db.run('INSERT INTO item(price, number, production, name, image, id_user) VALUES(?,?,?,?,?,?)',[1000,   0,      6,      "Cluster"           ,"cluster.png"         ,data.id]);
+                    db.run('INSERT INTO item(price, number, production, name, image, id_user) VALUES(?,?,?,?,?,?)',[5000,   0,      12,     "Fêtes de Bayonne"  ,"party.png"           ,data.id]);
+                    
+                    db.run('INSERT INTO power(actif, name, price, coeff, item_id, image, id_user) VALUES(?,?,?,?,?,?,?)',[false,   "Double Clicker",                        100,    2,   null,  "img.jpg",  data.id]);
+                    // db.run('INSERT INTO power(actif, name, price, coeff, item_id, image, id_user) VALUES(?,?,?,?,?,?,?)',[false,   "Double Production Pangolin",           1000,    2,   0,  ,  "img.jpg",  data.id]);
+                    // db.run('INSERT INTO power(actif, name, price, coeff, item_id, image, id_user) VALUES(?,?,?,?,?,?,?)',[false,   "Double Production des faux tests",     5000,    2,   1,  ,  "img.jpg",  data.id]);
+                    // db.run('INSERT INTO power(actif, name, price, coeff, item_id, image, id_user) VALUES(?,?,?,?,?,?,?)',[false,   "Double Production Cluster",            10000,   2,   2,  ,  "img.jpg",  data.id]);
+                    // db.run('INSERT INTO power(actif, name, price, coeff, item_id, image, id_user) VALUES(?,?,?,?,?,?,?)',[false,   "Double Alcool Fêtes de Bayonne",       50000,   2,   3,  ,  "img.jpg",  data.id]);
+                    resolve(true);
+                });
+            }
+        });
     });
   } catch (err) {
     throw err;
@@ -210,7 +273,11 @@ function verifier_inscription(userData) {
     return new Promise((resolve, reject) => {
       try {
         db.get('SELECT * FROM user WHERE email=?',[userData.email] , function(err, data) {
-          resolve(data);
+            let SELECT_ITEMS_OF_USER = `SELECT * FROM user JOIN item ON item.id_user = user.id WHERE user.id = ${data.id}`;
+            db.all(SELECT_ITEMS_OF_USER, function(err,items){
+                data.items = items;
+                resolve(data);
+            })
         })
         
       } catch (err) {
@@ -246,37 +313,43 @@ function getUserDataByID(id){
 }
 
 ////////// ITEMS
-function updateItem(id,body) {
+function updateItems(items) {
+    items.forEach(item => {
+        updateItem(item);
+    })
+}
+
+function updateItem(item) {
     let UPDATE_REQUEST = 'UPDATE item SET';
-    for (const attribut in body) {
+    for (const attribut in item) {
         switch (attribut) {
             case 'price':
-              UPDATE_REQUEST+=` price='${body.price}',`;
+              UPDATE_REQUEST+=` price='${item.price}',`;
               break;
             case 'number':
-              UPDATE_REQUEST+=` number = ${body.number},`;
+              UPDATE_REQUEST+=` number = ${item.number},`;
               break;
             case 'production':
-              UPDATE_REQUEST+=` production = ${body.production},`;
+              UPDATE_REQUEST+=` production = ${item.production},`;
               break;
             default:
-              console.log(`Sorry, we are out of ${expr}.`);
+              break;
           }
     }
     UPDATE_REQUEST=UPDATE_REQUEST.slice(0,-1); //supprimer la dernière virgule
-    UPDATE_REQUEST+=` WHERE item.id = ${id};`;
+    UPDATE_REQUEST+=` WHERE item.id = ${item.id};`;
     db.run(UPDATE_REQUEST);
 }
 function verifierElement(type,id) {
     return new Promise((resolve, reject) => {
-        db.get(`SELECT * FROM ${type} WHERE id=?`,[id] , function(err, data) {
+        db.get(`SELECT * FROM ${type} WHERE user_id=?`,[id] , function(err, data) {
           resolve(data);
         });
     });
 }
-function getDynamicItemByID(id){
+function getItemByID(id){
     return new Promise((resolve, reject) => {
-        const SELECT_ITEMS_OF_USER = `SELECT item.id, price, number, production FROM user JOIN item ON item.id_user = user.id WHERE user.id = ${id}`;
+        const SELECT_ITEMS_OF_USER = `SELECT * FROM user JOIN item ON item.id_user = user.id WHERE user.id = ${id}`;
 
         db.all(SELECT_ITEMS_OF_USER, function(err,data){
             resolve(data);
@@ -292,19 +365,16 @@ function getAllElement(type){
         })
     });
 }
-function getStaticItemByID(id){
-    return new Promise((resolve, reject) => {
-        const SELECT_ITEMS_OF_USER = `SELECT item.id, name, image FROM user JOIN item ON item.id_user = user.id WHERE user.id = ${id}`;
 
-        db.all(SELECT_ITEMS_OF_USER, function(err,data){
-            resolve(data);
-        })
-    });
-}
 
 ////////// POWERS
-function updatePower(id,body) {
-    let UPDATE_REQUEST = `UPDATE power SET actif=${body.actif} WHERE power.id = ${id};`;
+function updatePowers(powers) {
+    powers.forEach(power => {
+        updatePower(power);
+    })
+}
+function updatePower(power) {
+    let UPDATE_REQUEST = `UPDATE power SET actif=${power.actif} WHERE power.id = ${power.id};`;
     db.run(UPDATE_REQUEST);
 }
 function getPowerByID(id){

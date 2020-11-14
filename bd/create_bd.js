@@ -8,8 +8,8 @@ const CREAT_USER = `CREATE TABLE IF NOT EXISTS user (
   prenom TEXT,
   date_update INTEGER,
   nb_malades INTEGER,
-  nb_malades_sec INTEGER,
-  nb_malades_click INTEGER);`;
+  production_per_sec INTEGER,
+  production_click INTEGER);`;
 
 const CREAT_ITEM = `CREATE TABLE IF NOT EXISTS item (
   id INTEGER PRIMARY KEY AUTOINCREMENT, 
@@ -32,7 +32,7 @@ const CREAT_POWER = `CREATE TABLE IF NOT EXISTS power (
   id_user INTEGER,
   FOREIGN KEY (id_user) REFERENCES user(id));`;
 
-const INSERT_USER = "INSERT INTO user(email, password, nom, prenom, date_update, nb_malades, nb_malades_sec, nb_malades_click) VALUES(?,?,?,?,?,?,?,?)";
+const INSERT_USER = "INSERT INTO user(email, password, nom, prenom, date_update, nb_malades, production_per_sec, production_click) VALUES(?,?,?,?,?,?,?,?)";
 const INSERT_ITEM = "INSERT INTO item(price, number, production, name, image, id_user) VALUES(?,?,?,?,?,?)";
 const INSERT_POWER = "INSERT INTO power(actif, name, price, coeff, item_id, image, id_user) VALUES(?,?,?,?,?,?,?)";
   
@@ -65,23 +65,23 @@ db.serialize(() => {
 
 
   //Début du peuplement de la BD
-  db.run(INSERT_USER,["richardbichard@gmail.com","dfDdBss083ddDegJ3D8sdfE4","Boilley","Richard",Math.floor(Date.now()/1000),1,172,13]);
-  db.run(INSERT_ITEM,[1000,14,12,"Fêtes de Bayonne","pangolin.png",1]);
-  db.run(INSERT_POWER,[false,"Dubler Click",100,0.5,13,"pangolin-power.png",1]);
+  // db.run(INSERT_USER,["lsk@ls.ls","123","Boilley","Richard",Math.floor(Date.now()/1000),1,172,13]);
+  // db.run(INSERT_ITEM,[1000,14,12,"Fêtes de Bayonne","pangolin.png",1]);
+  // db.run(INSERT_POWER,[false,"Dubler Click",100,0.5,13,"pangolin-power.png",1]);
 
   //Afficher la BD
-  db.all(SELECT_ALL_USER,[], function(err,data){
-      console.log("USERS");
-      console.log(data);
-  });
-  db.all(SELECT_ALL_ITEM,[], function(err,data){
-      console.log("ITEMS");
-      console.log(data);
-  });
-  db.all(SELECT_ALL_POWER,[], function(err,data){
-      console.log("POWERS");
-      console.log(data);
-  });
+  // db.all(SELECT_ALL_USER,[], function(err,data){
+  //     console.log("USERS");
+  //     console.log(data);
+  // });
+  // db.all(SELECT_ALL_ITEM,[], function(err,data){
+  //     console.log("ITEMS");
+  //     console.log(data);
+  // });
+  // db.all(SELECT_ALL_POWER,[], function(err,data){
+  //     console.log("POWERS");
+  //     console.log(data);
+  // });
 });
 
 //Fermeture de la BD
