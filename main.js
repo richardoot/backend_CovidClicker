@@ -248,7 +248,9 @@ function ajouter_un_user(userData) {
                 } else {
                     db.run('INSERT INTO user(email, password, nom, prenom, date_update, nb_malades, production_per_sec, production_click) VALUES(?,?,?,?,?,?,?,?)',[userData.email, userData.password, userData.nom, userData.prenom, Math.floor(Date.now()/1000), 0, 0, 1000]); 
                     db.get('SELECT * FROM user WHERE email=?',[userData.email],function(err,data){
-                        db.run('INSERT INTO item(id, price, number, production, name, image, id_user) VALUES(?,?,?,?,?,?,?),(?,?,?,?,?,?,?),(?,?,?,?,?,?,?),(?,?,?,?,?,?,?)',[ 0,10,0,0.5,"Pangolin","pangolin-item.png",data.id,1 ,100,0,3,"Test défaillant","test-tube.png",data.id,2,1000,0,6,"Cluster","cluster.png",data.id,3 ,5000,0,12,"Fêtes de Bayonne","party.png",data.id]);
+                        db.run('INSERT INTO item(price, number, production, name, image, id_user) VALUES(?,?,?,?,?,?),(?,?,?,?,?,?),(?,?,?,?,?,?),(?,?,?,?,?,?)',[ 10,0,0.5,"Pangolin","pangolin-item.png",data.id ,100,0,3,"Test défaillant","test-tube.png",data.id,1000,0,6,"Cluster","cluster.png",data.id,5000,0,12,"Fêtes de Bayonne","party.png",data.id]);
+                        // db.run('INSERT INTO power(actif, name, price, coeff, item_id, image, id_user) VALUES(?,?,?,?,?,?,?)',[false,"Double Clicker",100,2,null,"img.jpg",data.id,false,"Double Production Pangolin",1000,2,0,"img.jpg",  data.id]);
+                        
                         // db.run('INSERT INTO item(id, price, number, production, name, image, id_user) VALUES(?,?,?,?,?,?,?)',[ 1 ,10,     0,      0.5,    "Pangolin"          ,"pangolin-item.png"   ,data.id]);
                         // db.run('INSERT INTO item(id, price, number, production, name, image, id_user) VALUES(?,?,?,?,?,?,?)',[ 2 ,100,    0,      3,      "Test défaillant"   ,"test-tube.png"       ,data.id]);
                         // db.run('INSERT INTO item(id, price, number, production, name, image, id_user) VALUES(?,?,?,?,?,?,?)',[ 3 ,1000,   0,      6,      "Cluster"           ,"cluster.png"         ,data.id]);
