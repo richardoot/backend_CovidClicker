@@ -197,21 +197,27 @@ app.listen(port, () => {
 ////////// USER
 function login(userData){
     return new Promise((resolve, reject) => {
-        db.get("SELECT * FROM user WHERE email=? AND password=?",[userData.email,userData.password], function(err,data){
-            if(err){
-                reject(500);
-            }
+        db.serialize(() => {
+            db.get("SELECT * FROM user WHERE email=? AND password=?",[userData.email,userData.password], function(err,data){
+                if(err){
+                    reject(500);
+                }
 
-            if(data){
-                getItemByID(data.id)
-                .then(items => {
-                    data.items = items;
+                if(data){
+                    let SELECT_ITEMS_OF_USER = `SELECT item.id  item.price, item.number, item.production, item.name, item.image, item.id_user FROM user JOIN item ON item.id_user = user.id WHERE user.id = ${data.id}`;
+                    db.all(SELECT_ITEMS_OF_USER, function(err,items){
+                        data.items = items;
+                    });
+                    let SELECT_POWERS_OF_USER = `SELECT power.id  power.actif, power.name, power.price, power.coeff, power.item_id, power.image, power.id_user FROM user JOIN power ON power.id_user = user.id WHERE user.id = ${data.id}`;
+                    db.all(SELECT_POWERS_OF_USER, function(err,powers){
+                        data.powers = powers;
+                    });
                     resolve(data);
-                });
 
-            } else{
-                reject(401);
-            }
+                } else{
+                    reject(401);
+                }
+            });
         });
     });
 }
@@ -281,15 +287,15 @@ function verifier_inscription(userData) {
       try {
         db.serialize(() => {
             db.get('SELECT * FROM user WHERE email=?',[userData.email] , function(err, data) {
-                let SELECT_ITEMS_OF_USER = `SELECT item.price, item.number, item.production, item.name, item.image, item.id_user FROM user JOIN item ON item.id_user = user.id WHERE user.id = ${data.id}`;
+                let SELECT_ITEMS_OF_USER = `SELECT item.id, price, number, production, name, image, id_user FROM user JOIN item ON item.id_user = user.id WHERE item.id_user = ${data.id}`;
                 db.all(SELECT_ITEMS_OF_USER, function(err,items){
                     data.items = items;
+                    let SELECT_POWERS_OF_USER = `SELECT power.id  actif, name, price, coeff, item_id, image, id_user FROM user JOIN power ON power.id_user = user.id WHERE power.id_user = ${data.id}`;
+                    db.all(SELECT_POWERS_OF_USER, function(err,powers){
+                        data.powers = powers;
+                        resolve(data);
                 });
-                let SELECT_POWERS_OF_USER = `SELECT power.actif, power.name, power.price, power.coeff, power.item_id, power.image, power.id_user FROM user JOIN power ON power.id_user = user.id WHERE user.id = ${data.id}`;
-                db.all(SELECT_POWERS_OF_USER, function(err,powers){
-                    data.powers = powers;
                 });
-                resolve(data);
             })
         });
       } catch (err) {
@@ -361,7 +367,7 @@ function verifierElement(type,id) {
 }
 function getItemByID(id){
     return new Promise((resolve, reject) => {
-        const SELECT_ITEMS_OF_USER = `SELECT * FROM user JOIN item ON item.id_user = user.id WHERE user.id = ${id}`;
+        const SELECT_ITEMS_OF_USER = `SELECT item.id item.price, item.number, item.production, item.name, item.image, item.id_user FROM user JOIN item ON item.id_user = user.id WHERE user.id = ${id}`;
 
         db.all(SELECT_ITEMS_OF_USER, function(err,data){
             resolve(data);
