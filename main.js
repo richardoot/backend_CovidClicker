@@ -204,15 +204,15 @@ function login(userData){
                 }
 
                 if(data){
-                    let SELECT_ITEMS_OF_USER = `SELECT item.id  item.price, item.number, item.production, item.name, item.image, item.id_user FROM user JOIN item ON item.id_user = user.id WHERE user.id = ${data.id}`;
+                let SELECT_ITEMS_OF_USER = `SELECT item.id, price, number, production, name, image, id_user FROM user JOIN item ON item.id_user = user.id WHERE item.id_user = ${data.id}`;
                     db.all(SELECT_ITEMS_OF_USER, function(err,items){
                         data.items = items;
+                    let SELECT_POWERS_OF_USER = `SELECT power.id, actif, name, price, coeff, item_id, image, id_user FROM user JOIN power ON power.id_user = user.id WHERE power.id_user = ${data.id}`;
+                        db.all(SELECT_POWERS_OF_USER, function(err,powers){
+                            data.powers = powers;
+                            resolve(data);
+                        });
                     });
-                    let SELECT_POWERS_OF_USER = `SELECT power.id  power.actif, power.name, power.price, power.coeff, power.item_id, power.image, power.id_user FROM user JOIN power ON power.id_user = user.id WHERE user.id = ${data.id}`;
-                    db.all(SELECT_POWERS_OF_USER, function(err,powers){
-                        data.powers = powers;
-                    });
-                    resolve(data);
 
                 } else{
                     reject(401);
@@ -290,9 +290,13 @@ function verifier_inscription(userData) {
                 let SELECT_ITEMS_OF_USER = `SELECT item.id, price, number, production, name, image, id_user FROM user JOIN item ON item.id_user = user.id WHERE item.id_user = ${data.id}`;
                 db.all(SELECT_ITEMS_OF_USER, function(err,items){
                     data.items = items;
-                    let SELECT_POWERS_OF_USER = `SELECT power.id  actif, name, price, coeff, item_id, image, id_user FROM user JOIN power ON power.id_user = user.id WHERE power.id_user = ${data.id}`;
+                    console.log("data 1");
+                    console.log(data);
+                    let SELECT_POWERS_OF_USER = `SELECT power.id, actif, name, price, coeff, item_id, image, id_user FROM user JOIN power ON power.id_user = user.id WHERE power.id_user = ${data.id}`;
                     db.all(SELECT_POWERS_OF_USER, function(err,powers){
                         data.powers = powers;
+                        console.log("data 2");
+                        console.log(data);
                         resolve(data);
                 });
                 });
